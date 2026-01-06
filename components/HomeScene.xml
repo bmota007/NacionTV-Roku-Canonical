@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeScene" extends="Scene">
+  <script uri="pkg:/components/HomeScene.brs" />
+  <script uri="pkg:/components/Config.brs" />
+
+  <interface>
+    <function name="requestDeepLink" />
+    <function name="OnInputAssoc" />     <!-- NEW: accepts assocarray -->
+    <function name="launchContent" />
+    <function name="onKeyEvent" />
+  </interface>
+
+  <children>
+    <Poster id="Bg" width="1280" height="720" translation="[0,0]"
+            uri="pkg:/images/bg_idle.jpg" loadDisplayMode="scaleToFill" visible="true" />
+    <Rectangle id="BgDim" width="1280" height="720" translation="[0,0]"
+               color="0x000000" opacity="0.35" visible="true" />
+    <Video id="Video" width="1280" height="720" translation="[0,0]" visible="false" />
+    <RowList id="RowList" translation="[80,600]" itemComponentName="RowListItems"
+             numRows="1" rowItemSize="[[260,160]]" itemSize="[260,160]"
+             rowLabelOffset="[[0,16]]" showRowLabel="false" showRowCounter="false"
+             rowFocusAnimationStyle="floatingFocus" visible="true" />
+  </children>
+</component>

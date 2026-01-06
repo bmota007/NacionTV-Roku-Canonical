@@ -1,0 +1,9 @@
+{
+  "type": "brightscript",
+  "request": "launch",
+  "name": "Launch Roku App",
+  "rootDir": "${workspaceFolder}",
+  "remoteHost": "172.20.154.72",
+  "remotePort": 8086,
+  "remoteDebuggerEnabled": true
+}

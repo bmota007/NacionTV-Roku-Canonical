@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="RowListItems" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="itemContentChanged" />
+    <field id="width" type="float" onChange="updateLayout" />
+    <field id="height" type="float" onChange="updateLayout" />
+  </interface>
+
+  <script type="text/brightscript"><![CDATA[
+    sub init()
+      m.Poster = m.top.findNode("poster")
+      m.Label  = m.top.findNode("label")
+    end sub
+
+    sub itemContentChanged()
+      if m.top.itemContent = invalid then return
+
+      ' Case-safe reads for fields coming from ContentNode
+      posterUri = invalid
+      titleTxt  = invalid
+
+      ' Try both casings to match how content is populated
+      if m.top.itemContent.HDPosterUrl <> invalid then
+        posterUri = m.top.itemContent.HDPosterUrl
+      else if m.top.itemContent.hdposterurl <> invalid then
+        posterUri = m.top.itemContent.hdposterurl
+      else if m.top.itemContent.logo <> invalid then
+        posterUri = m.top.itemContent.logo
+      end if
+
+      if m.top.itemContent.Title <> invalid then
+        titleTxt = m.top.itemContent.Title
+      else if m.top.itemContent.title <> invalid then
+        titleTxt = m.top.itemContent.title
+      end if
+
+      if m.Poster <> invalid then m.Poster.uri = posterUri
+      if m.Label  <> invalid then
+        if titleTxt <> invalid then
+          m.Label.text = titleTxt
+        else
+          m.Label.text = ""
+        end if
+      end if
+    end sub
+
+    sub updateLayout()
+      if m.Poster <> invalid then
+        m.Poster.width  = m.top.width
+        m.Poster.height = m.top.height - 40
+      end if
+
+      if m.Label <> invalid then
+        m.Label.width = m.top.width
+        y = m.top.height - 35
+        if m.Poster <> invalid then
+          y = m.Poster.height + 5
+        end if
+        m.Label.translation = [0, y]
+      end if
+    end sub
+  ]]></script>
+
+  <children>
+    <!-- Poster scales to fit the tile; change to scaleToFill if you prefer full-bleed -->
+    <Poster id="poster"
+            width="260" height="160"
+            loadDisplayMode="scaleToFit" />
+
+    <Label id="label"
+           width="260" height="30"
+           horizAlign="center"
+           color="0xFFFFFFFF"
+           font="font:SmallBoldSystemFont"
+           translation="[0,165]" />
+  </children>
+</component>
