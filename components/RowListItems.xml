@@ -10,16 +10,16 @@
     sub init()
       m.Poster = m.top.findNode("poster")
       m.Label  = m.top.findNode("label")
+      m.Focus  = m.top.findNode("focusRect")
     end sub
 
     sub itemContentChanged()
       if m.top.itemContent = invalid then return
 
-      ' Case-safe reads for fields coming from ContentNode
       posterUri = invalid
       titleTxt  = invalid
 
-      ' Try both casings to match how content is populated
+      ' poster
       if m.top.itemContent.HDPosterUrl <> invalid then
         posterUri = m.top.itemContent.HDPosterUrl
       else if m.top.itemContent.hdposterurl <> invalid then
@@ -28,14 +28,15 @@
         posterUri = m.top.itemContent.logo
       end if
 
+      ' title
       if m.top.itemContent.Title <> invalid then
         titleTxt = m.top.itemContent.Title
       else if m.top.itemContent.title <> invalid then
         titleTxt = m.top.itemContent.title
       end if
 
-      if m.Poster <> invalid then m.Poster.uri = posterUri
-      if m.Label  <> invalid then
+      if m.Poster <> invalid and posterUri <> invalid then m.Poster.uri = posterUri
+      if m.Label <> invalid then
         if titleTxt <> invalid then
           m.Label.text = titleTxt
         else
@@ -45,33 +46,65 @@
     end sub
 
     sub updateLayout()
+      w = m.top.width
+      h = m.top.height
+
+      if m.Focus <> invalid then
+        m.Focus.width = w
+        m.Focus.height = h
+      end if
+
       if m.Poster <> invalid then
-        m.Poster.width  = m.top.width
-        m.Poster.height = m.top.height - 40
+        m.Poster.width = w
+        m.Poster.height = h - 60
       end if
 
       if m.Label <> invalid then
-        m.Label.width = m.top.width
-        y = m.top.height - 35
-        if m.Poster <> invalid then
-          y = m.Poster.height + 5
-        end if
-        m.Label.translation = [0, y]
+        m.Label.width = w
+        m.Label.height = 60
+        m.Label.translation = [0, h - 60]
       end if
     end sub
   ]]></script>
 
   <children>
-    <!-- Poster scales to fit the tile; change to scaleToFill if you prefer full-bleed -->
+    <!-- Focus outline (RowList will toggle opacity automatically using focus/defocus states) -->
+    <Rectangle id="focusRect"
+               width="500" height="320"
+               color="0xFFFFFFFF"
+               opacity="0.0" />
+
+    <!-- Poster -->
     <Poster id="poster"
-            width="260" height="160"
-            loadDisplayMode="scaleToFit" />
+            width="500" height="260"
+            loadDisplayMode="scaleToFill" />
+
+    <!-- EN VIVO pill -->
+    <Rectangle id="liveBadge"
+               width="120" height="32"
+               translation="[14,14]"
+               color="0xD32F2FFF"
+               opacity="1.0" />
+    <Label id="liveLabel"
+           text="EN VIVO"
+           translation="[30,19]"
+           font="font:SmallBoldSystemFont"
+           color="0xFFFFFFFF" />
+
+    <!-- Bottom title bar -->
+    <Rectangle id="titleBar"
+               width="500" height="60"
+               translation="[0,260]"
+               color="0x000000"
+               opacity="0.55" />
 
     <Label id="label"
-           width="260" height="30"
+           width="500" height="60"
+           translation="[0,260]"
            horizAlign="center"
+           vertAlign="center"
            color="0xFFFFFFFF"
-           font="font:SmallBoldSystemFont"
-           translation="[0,165]" />
+           font="font:MediumBoldSystemFont"
+           text="" />
   </children>
 </component>
