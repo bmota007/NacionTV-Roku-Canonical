@@ -22,6 +22,10 @@ sub init()
   m.IntlDot = m.top.findNode("IntlLiveDot")
   m.HouDot  = m.top.findNode("HouLiveDot")
 
+  ' Optional: badge groups (so we can slightly fade non-focused)
+  m.IntlBadge = m.top.findNode("IntlBadge")
+  m.HouBadge  = m.top.findNode("HouBadge")
+
   m.isPlaying = false
   m.focusIndex = 0 ' 0=Intl, 1=Houston
   m.pulseOn = true
@@ -48,15 +52,16 @@ sub init()
 
   ' Pulse timer for EN VIVO dot
   m.pulseTimer = CreateObject("roSGNode", "Timer")
-  m.pulseTimer.duration = 0.45
-  m.pulseTimer.repeat = true
-  m.pulseTimer.observeField("fire", "onPulseTick")
-  m.pulseTimer.control = "start"
+  if m.pulseTimer <> invalid then
+    m.pulseTimer.duration = 0.45
+    m.pulseTimer.repeat = true
+    m.pulseTimer.observeField("fire", "onPulseTick")
+    m.pulseTimer.control = "start"
+  end if
 
   showHome()
 
   ' Force focus so onKeyEvent always fires
-  m.top.setFocus(true)
   m.top.setFocus(true)
 
   updateFocus()
@@ -113,24 +118,36 @@ end sub
 
 
 ' Samsung-like focus:
-' - charcoal glow BEHIND the focused tile (opacity ~0.25)
+' - charcoal glow BEHIND the focused tile (opacity ~0.20-0.25)
 ' - focused tile zooms forward slightly
 ' - non-focused tile backs out a little
 sub updateFocus()
-  ' Focus glow (charcoal, subtle)
+  ' If Roku steals focus, pull it back
+  if m.top <> invalid and m.top.hasFocus() = false then
+    m.top.setFocus(true)
+  end if
+
+  ' Reset glow
   if m.IntlFocus <> invalid then m.IntlFocus.opacity = 0.0
   if m.HouFocus <> invalid then m.HouFocus.opacity = 0.0
 
-  ' Zoom style (focused forward)
-  if m.IntlTile <> invalid then m.IntlTile.scale = [0.98, 0.98]
-  if m.HouTile  <> invalid then m.HouTile.scale  = [0.98, 0.98]
+  ' Base scale for both = slightly backed out
+  if m.IntlTile <> invalid then m.IntlTile.scale = [0.96, 0.96]
+  if m.HouTile  <> invalid then m.HouTile.scale  = [0.96, 0.96]
 
+  ' Slightly dim badge on non-focused (optional nice touch)
+  if m.IntlBadge <> invalid then m.IntlBadge.opacity = 0.85
+  if m.HouBadge  <> invalid then m.HouBadge.opacity  = 0.85
+
+  ' Focused styling
   if m.focusIndex = 0 then
-    if m.IntlFocus <> invalid then m.IntlFocus.opacity = 0.26
-    if m.IntlTile  <> invalid then m.IntlTile.scale = [1.06, 1.06]
+    if m.IntlFocus <> invalid then m.IntlFocus.opacity = 0.22
+    if m.IntlTile  <> invalid then m.IntlTile.scale = [1.04, 1.04]
+    if m.IntlBadge <> invalid then m.IntlBadge.opacity = 1.0
   else
-    if m.HouFocus <> invalid then m.HouFocus.opacity = 0.26
-    if m.HouTile  <> invalid then m.HouTile.scale = [1.06, 1.06]
+    if m.HouFocus <> invalid then m.HouFocus.opacity = 0.22
+    if m.HouTile  <> invalid then m.HouTile.scale = [1.04, 1.04]
+    if m.HouBadge <> invalid then m.HouBadge.opacity = 1.0
   end if
 
   ' Only focused tile dot is visible (and will pulse)
@@ -142,6 +159,9 @@ sub updateFocus()
   else
     if m.HouDot <> invalid then m.HouDot.opacity = 1.0
   end if
+
+  ' Reset pulse state so it looks crisp when switching focus
+  m.pulseOn = true
 end sub
 
 
@@ -203,12 +223,12 @@ sub playSelected()
 end sub
 
 
-' -------- Remote keys --------
-function onKeyEvent(key, press)
+' -------- Remote keys (MUST RETURN BOOLEAN) --------
+function onKeyEvent(key as String, press as Boolean) as Boolean
   if press <> true then return false
 
   ' When playing: BACK returns home
-  if m.isPlaying then
+  if m.isPlaying = true then
     if key = "back" then
       showHome()
       return true
@@ -226,7 +246,8 @@ function onKeyEvent(key, press)
     return true
   end if
 
-  if key = "OK" or key = "Select" or key = "select" then
+  ' Some remotes send Play or OK
+  if key = "OK" or key = "Select" or key = "select" or key = "play" then
     playSelected()
     return true
   end if
