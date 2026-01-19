@@ -1,42 +1,84 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="HomeScene" extends="Scene">
-  <script uri="pkg:/components/HomeScene.brs" />
-  <script uri="pkg:/components/Config.brs" />
+  <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
+  <script type="text/brightscript" uri="pkg:/components/Config.brs" />
 
   <interface>
     <function name="requestDeepLink" />
     <function name="OnInputAssoc" />
     <function name="launchContent" />
-    <function name="onKeyEvent" />
   </interface>
 
   <children>
-    <Poster id="Bg"
-            width="1280" height="720" translation="[0,0]"
-            uri="pkg:/images/bg_idle.jpg"
-            loadDisplayMode="scaleToFill"
-            visible="true" />
+    <Poster
+      id="Bg"
+      width="1280" height="720"
+      translation="[0,0]"
+      uri="pkg:/images/bg_idle.jpg"
+      loadDisplayMode="scaleToFill"
+      visible="true" />
 
-    <Rectangle id="BgDim"
-               width="1280" height="720" translation="[0,0]"
-               color="0x000000" opacity="0.35" visible="true" />
+    <Rectangle
+      id="BgDim"
+      width="1280" height="720"
+      translation="[0,0]"
+      color="0x000000"
+      opacity="0.35"
+      visible="true" />
 
-    <Video id="Video"
-           width="1280" height="720" translation="[0,0]"
-           visible="false" />
+    <Video
+      id="Video"
+      width="1280" height="720"
+      translation="[0,0]"
+      visible="false" />
 
-    <!-- TWO BIG TILES (Internacional + Houston) -->
-    <RowList id="RowList"
-             translation="[110,380]"
-             itemComponentName="RowListItems"
-             numRows="1"
-             showRowLabel="false"
-             showRowCounter="false"
-             rowFocusAnimationStyle="floatingFocus"
-             itemSpacing="[[60,0]]"
-             rowItemSpacing="[[60,0]]"
-             rowItemSize="[[500,320]]"
-             itemSize="[500,320]"
-             visible="true" />
+    <!-- MENU GROUP (two tiles) -->
+    <Group id="Menu" translation="[120,300]" visible="true">
+
+      <!-- TILE: INTERNACIONAL -->
+      <Group id="IntlTile" translation="[0,0]" scale="[1.0,1.0]">
+        <!-- charcoal focus behind tile (NOT a white mask) -->
+        <Rectangle id="IntlFocus"
+          width="520" height="340"
+          translation="[-10,-10]"
+          color="0x000000FF"
+          opacity="0.0" />
+
+        <Poster id="IntlPoster"
+          width="500" height="320"
+          uri="pkg:/images/internacional_poster.png"
+          loadDisplayMode="scaleToFill" />
+
+        <!-- EN VIVO badge -->
+        <Group id="IntlBadge" translation="[18,16]" visible="true">
+          <Rectangle width="130" height="36" color="0xD32F2FFF" opacity="1.0" />
+          <Label id="IntlLiveDot" text="●" translation="[10,5]" color="0xFFFFFFFF" font="font:MediumBoldSystemFont" />
+          <Label text="EN VIVO" translation="[32,7]" color="0xFFFFFFFF" font="font:SmallBoldSystemFont" />
+        </Group>
+      </Group>
+
+      <!-- TILE: HOUSTON -->
+      <Group id="HouTile" translation="[560,0]" scale="[1.0,1.0]">
+        <!-- charcoal focus behind tile (NOT a white mask) -->
+        <Rectangle id="HouFocus"
+          width="520" height="340"
+          translation="[-10,-10]"
+          color="0x000000FF"
+          opacity="0.0" />
+
+        <Poster id="HouPoster"
+          width="500" height="320"
+          uri="pkg:/images/houston_poster.png"
+          loadDisplayMode="scaleToFill" />
+
+        <!-- EN VIVO badge -->
+        <Group id="HouBadge" translation="[18,16]" visible="true">
+          <Rectangle width="130" height="36" color="0xD32F2FFF" opacity="1.0" />
+          <Label id="HouLiveDot" text="●" translation="[10,5]" color="0xFFFFFFFF" font="font:MediumBoldSystemFont" />
+          <Label text="EN VIVO" translation="[32,7]" color="0xFFFFFFFF" font="font:SmallBoldSystemFont" />
+        </Group>
+      </Group>
+
+    </Group>
   </children>
 </component>

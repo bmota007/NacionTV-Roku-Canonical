@@ -1,4 +1,4 @@
-' main.brs — extract roInputEvent.GetInfo() and pass AA to scene
+' main.brs — OLDER ROKU SAFE (no SignalBeacon)
 
 sub Main(args as Dynamic)
     screen = CreateObject("roSGScreen")
@@ -8,6 +8,7 @@ sub Main(args as Dynamic)
     scene = screen.CreateScene("HomeScene")
     screen.Show()
 
+    ' Create roInput and consume roInputEvent (optional)
     input = CreateObject("roInput")
     if input <> invalid then
         input.SetMessagePort(port)
@@ -16,37 +17,26 @@ sub Main(args as Dynamic)
         print "MAIN: roInput FAILED to create"
     end if
 
-    ' COLD deep link
+    ' Cold deep link (optional)
     if args <> invalid and args.contentId <> invalid then
         print "MAIN: COLD deeplink contentId="; args.contentId; " mediaType="; args.mediaType
-        if scene <> invalid then
-            scene.callFunc("requestDeepLink", args.contentId)
-        else
-            print "MAIN: scene is invalid"
-        end if
+        if scene <> invalid then scene.callFunc("requestDeepLink", args.contentId)
     else
         print "MAIN: COLD deeplink: none"
     end if
 
     while true
         msg = wait(0, port)
-        mt = type(msg)
+        if msg = invalid then
+            ' no-op
 
-        if mt = "roSGScreenEvent" then
+        else if type(msg) = "roSGScreenEvent" then
             if msg.IsScreenClosed() then return
 
-        else if mt = "roInputEvent" then
-            ' Convert to plain AA so SG can receive it
-            di = invalid
-            if GetInterface(msg, "ifInputEvent") <> invalid then
-                if msg.IsInput() then di = msg.GetInfo()
-            else
-                di = msg.GetInfo()
-            end if
-
-            print "MAIN: roInputEvent -> di="; di
+        else if type(msg) = "roInputEvent" then
+            di = msg.GetInfo()
+            print "MAIN: roInputEvent -> "; di
             if di <> invalid and scene <> invalid then
-                ' New handler that accepts the assocarray directly
                 scene.callFunc("OnInputAssoc", di)
             end if
         end if

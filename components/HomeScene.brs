@@ -1,232 +1,246 @@
-' HomeScene.brs — add OnInputAssoc that accepts AA, keep your working logic
+'===========================================================
+' HomeScene.brs - TWO STATIC TILES (Samsung-like focus)
+' - Charcoal glow behind focused tile
+' - Focused tile zooms forward, other backs out slightly
+' - EN VIVO dot pulses ONLY on focused tile
+'===========================================================
 
 sub init()
-  m.Bg      = m.top.findNode("Bg")
-  m.BgDim   = m.top.findNode("BgDim")
-  m.RowList = m.top.findNode("RowList")
-  m.Video   = m.top.findNode("Video")
+  print "HomeScene: init (two tiles + keys)"
 
-  m.pendingContentId = invalid
-  m.isReady = false
-  m.idIndex = {}
-  m.titleIndex = {}
+  m.Video = m.top.findNode("Video")
+  m.Bg = m.top.findNode("Bg")
+  m.BgDim = m.top.findNode("BgDim")
+  m.Menu = m.top.findNode("Menu")
 
+  m.IntlTile = m.top.findNode("IntlTile")
+  m.HouTile  = m.top.findNode("HouTile")
+
+  m.IntlFocus = m.top.findNode("IntlFocus")
+  m.HouFocus  = m.top.findNode("HouFocus")
+
+  m.IntlDot = m.top.findNode("IntlLiveDot")
+  m.HouDot  = m.top.findNode("HouLiveDot")
+
+  m.isPlaying = false
+  m.focusIndex = 0 ' 0=Intl, 1=Houston
+  m.pulseOn = true
+
+  ' Load streams from Config.brs
+  cfg = loadConfig()
+  m.streamIntl = invalid
+  m.streamHou  = invalid
+
+  for each it in cfg
+    if it <> invalid and it.Title <> invalid then
+      t = UCase(it.Title)
+      if t = "INTERNACIONAL" then m.streamIntl = it
+      if t = "HOUSTON" then m.streamHou = it
+    end if
+  end for
+
+  ' Video setup
   if m.Video <> invalid then
     m.Video.enableUI = false
-    m.Video.visible  = false
+    m.Video.visible = false
     m.Video.observeField("state", "onVideoStateChanged")
   end if
 
-  m.configArray = loadConfig()
+  ' Pulse timer for EN VIVO dot
+  m.pulseTimer = CreateObject("roSGNode", "Timer")
+  m.pulseTimer.duration = 0.45
+  m.pulseTimer.repeat = true
+  m.pulseTimer.observeField("fire", "onPulseTick")
+  m.pulseTimer.control = "start"
 
-  content = createObject("roSGNode", "ContentNode")
-  row = createObject("roSGNode", "ContentNode")
-  if m.configArray <> invalid then
-    for each item in m.configArray
-      node = createObject("roSGNode", "ContentNode")
-      node.title        = item.title
-      node.HDPosterUrl  = item.logo
-      node.url          = item.stream
-      node.streamFormat = item.streamFormat
-      node.live         = true
-      ' Ensure id exists: use item.id or fallback to lowercase(title)
-      if item.id <> invalid and item.id <> "" then
-        node.id = item.id
-      else
-        node.id = LCase(item.title)
-      end if
-      row.appendChild(node)
-    end for
-  end if
-  content.appendChild(row)
+  showHome()
 
-  if m.RowList <> invalid then
-    m.RowList.content = content
-    m.RowList.visible = true
-    m.RowList.setFocus(true)
-    m.RowList.observeField("rowItemSelected", "onChannelSelected")
-  end if
+  ' Force focus so onKeyEvent always fires
+  m.top.setFocus(true)
+  m.top.setFocus(true)
 
-  buildIndexes()
+  updateFocus()
 
-  m.isReady = true
-  tryPlayPendingDeepLink()
-
-  setIdleUI(true)
-  m.top.signalBeacon("AppLaunchComplete")
+  print "HomeScene: init done"
 end sub
 
-sub buildIndexes()
-  m.idIndex = {}
-  m.titleIndex = {}
 
-  if m.RowList = invalid then return
-  row = m.RowList.content.getChild(0)
-  if row = invalid then return
-
-  for j = 0 to row.getChildCount()-1
-    item = row.getChild(j)
-    if item <> invalid
-      if item.id <> invalid and item.id <> "" then
-        m.idIndex[LCase(item.id)] = { row: 0, col: j }
-      end if
-      if item.title <> invalid and item.title <> "" then
-        m.titleIndex[LCase(item.title)] = { row: 0, col: j }
-      end if
-    end if
-  end for
-
-  print "DL INDEX (ids):"; m.idIndex
-  print "DL INDEX (titles):"; m.titleIndex
+' -------- Interface functions (safe) --------
+sub requestDeepLink(contentId)
+  print "HomeScene: requestDeepLink "; contentId
 end sub
 
-' NEW: warm deep link handler that receives AA from main.brs
-function OnInputAssoc(di as Object) as Boolean
-  print "SCENE: OnInputAssoc di="; di
-  if di <> invalid and di.contentId <> invalid then
-    ' Diagnostic helper
-    if LCase(di.contentId) = "__list__" then
-      printAvailableDeepLinks()
-      return true
-    end if
-    requestDeepLink(di.contentId)
-    return true
-  end if
-  return false
-end function
-
-sub printAvailableDeepLinks()
-  if m.RowList = invalid then return
-  row = m.RowList.content.getChild(0)
-  if row = invalid then return
-  print "====== Available Deep Links ======"
-  for j = 0 to row.getChildCount()-1
-    item = row.getChild(j)
-    if item <> invalid then
-      print " id="; item.id; "  title="; item.title
-    end if
-  end for
-  print "=================================="
+sub OnInputAssoc(info)
+  print "HomeScene: OnInputAssoc "; info
 end sub
 
-function requestDeepLink(contentId as String) as void
-  print "SCENE: requestDeepLink contentId="; contentId
-  m.pendingContentId = contentId
-  tryPlayPendingDeepLink()
-end function
-
-sub tryPlayPendingDeepLink()
-  if m.pendingContentId = invalid then return
-  if m.isReady and launchContent(m.pendingContentId) then
-    print "SCENE: pending deep link played"
-    m.pendingContentId = invalid
-  else
-    timer = CreateObject("roSGNode", "Timer")
-    timer.observeField("fire", "onRetryDeepLink")
-    timer.duration = 0.15
-    timer.control = "start"
-    m.retryTimer = timer
-  end if
+sub launchContent(item)
+  print "HomeScene: launchContent "; item
 end sub
 
-sub onRetryDeepLink()
-  if m.pendingContentId <> invalid then
-    print "SCENE: retry deep link id="; m.pendingContentId
-    if launchContent(m.pendingContentId) then
-      m.pendingContentId = invalid
-    end if
-  end if
-  if m.retryTimer <> invalid then m.retryTimer.control = "stop"
-end sub
 
-sub setIdleUI(isIdle as Boolean)
-  if m.Bg      <> invalid then m.Bg.visible      = isIdle
-  if m.BgDim   <> invalid then m.BgDim.visible   = isIdle
-  if m.RowList <> invalid then m.RowList.visible = isIdle
-  if m.Video   <> invalid then m.Video.visible   = not isIdle
-end sub
+' -------- UI --------
+sub showHome()
+  m.isPlaying = false
 
-function launchContent(contentId as String) as Boolean
-  if m.Video = invalid or m.RowList = invalid then return false
-  if contentId = invalid then return false
+  if m.Menu <> invalid then m.Menu.visible = true
+  if m.Bg <> invalid then m.Bg.visible = true
+  if m.BgDim <> invalid then m.BgDim.visible = true
 
-  row = m.RowList.content.getChild(0)
-  if row = invalid then return false
-
-  idLC = LCase(contentId)
-
-  if m.idIndex.doesexist(idLC) then
-    idx = m.idIndex[idLC]
-    return playByIndex(idx.row, idx.col)
-  end if
-
-  if m.titleIndex.doesexist(idLC) then
-    idx = m.titleIndex[idLC]
-    return playByIndex(idx.row, idx.col)
-  end if
-
-  for j = 0 to row.getChildCount()-1
-    item = row.getChild(j)
-    if item <> invalid then
-      if item.id <> invalid and LCase(item.id) = idLC then return playByIndex(0, j)
-      if item.title <> invalid and LCase(item.title) = idLC then return playByIndex(0, j)
-    end if
-  end for
-
-  print "SCENE: DeepLink no match contentId="; contentId
-  printAvailableDeepLinks()
-  return false
-end function
-
-function playByIndex(r as Integer, c as Integer) as Boolean
-  row = m.RowList.content.getChild(r)
-  if row = invalid then return false
-  if c < 0 or c >= row.getChildCount() then return false
-
-  item = row.getChild(c)
-  print "SCENE: launching id="; item.id; "  title="; item.title
-  m.Video.content = item
-  m.Video.control = "play"
-  setIdleUI(false)
-  m.RowList.setFocus(false)
-  m.Video.setFocus(true)
-  return true
-end function
-
-sub onChannelSelected()
-  if m.RowList = invalid or m.Video = invalid then return
-  idx = m.RowList.rowItemSelected
-  print "SCENE: rowItemSelected="; idx
-  if type(idx) = "roArray" and idx.count() = 2 then
-    playByIndex(idx[0], idx[1])
-  end if
-end sub
-
-sub onVideoStateChanged()
-  if m.Video = invalid then return
-  print "SCENE: Video state="; m.Video.state
-  if m.Video.state = "playing" then
-    setIdleUI(false)
-    m.Video.setFocus(true)
-  else if m.Video.state = "stopped" or m.Video.state = "finished" or m.Video.state = "error" then
+  if m.Video <> invalid then
     m.Video.control = "stop"
     m.Video.content = invalid
-    setIdleUI(true)
-    if m.RowList <> invalid then m.RowList.setFocus(true)
+    m.Video.visible = false
+  end if
+
+  updateFocus()
+  m.top.setFocus(true)
+end sub
+
+sub showPlayer()
+  m.isPlaying = true
+
+  if m.Menu <> invalid then m.Menu.visible = false
+  if m.Bg <> invalid then m.Bg.visible = false
+  if m.BgDim <> invalid then m.BgDim.visible = false
+
+  if m.Video <> invalid then
+    m.Video.visible = true
+  end if
+
+  m.top.setFocus(true)
+end sub
+
+
+' Samsung-like focus:
+' - charcoal glow BEHIND the focused tile (opacity ~0.25)
+' - focused tile zooms forward slightly
+' - non-focused tile backs out a little
+sub updateFocus()
+  ' Focus glow (charcoal, subtle)
+  if m.IntlFocus <> invalid then m.IntlFocus.opacity = 0.0
+  if m.HouFocus <> invalid then m.HouFocus.opacity = 0.0
+
+  ' Zoom style (focused forward)
+  if m.IntlTile <> invalid then m.IntlTile.scale = [0.98, 0.98]
+  if m.HouTile  <> invalid then m.HouTile.scale  = [0.98, 0.98]
+
+  if m.focusIndex = 0 then
+    if m.IntlFocus <> invalid then m.IntlFocus.opacity = 0.26
+    if m.IntlTile  <> invalid then m.IntlTile.scale = [1.06, 1.06]
+  else
+    if m.HouFocus <> invalid then m.HouFocus.opacity = 0.26
+    if m.HouTile  <> invalid then m.HouTile.scale = [1.06, 1.06]
+  end if
+
+  ' Only focused tile dot is visible (and will pulse)
+  if m.IntlDot <> invalid then m.IntlDot.opacity = 0.0
+  if m.HouDot  <> invalid then m.HouDot.opacity  = 0.0
+
+  if m.focusIndex = 0 then
+    if m.IntlDot <> invalid then m.IntlDot.opacity = 1.0
+  else
+    if m.HouDot <> invalid then m.HouDot.opacity = 1.0
   end if
 end sub
 
-function onKeyEvent(key as String, press as Boolean) as Boolean
-  if not press then return false
-  if m.Video <> invalid and m.Video.state = "playing" then
+
+' Pulse the dot ONLY on the focused tile
+sub onPulseTick()
+  if m.isPlaying then return
+
+  m.pulseOn = not m.pulseOn
+
+  dimOpacity = 0.25
+  brightOpacity = 1.0
+
+  target = invalid
+  if m.focusIndex = 0 then
+    target = m.IntlDot
+  else
+    target = m.HouDot
+  end if
+
+  if target <> invalid then
+    if m.pulseOn then
+      target.opacity = brightOpacity
+    else
+      target.opacity = dimOpacity
+    end if
+  end if
+end sub
+
+
+' -------- Playback --------
+sub playSelected()
+  item = invalid
+  if m.focusIndex = 0 then item = m.streamIntl else item = m.streamHou
+
+  if item = invalid then
+    print "HomeScene: playSelected item invalid"
+    return
+  end if
+
+  if item.Stream = invalid or item.Stream = "" then
+    print "HomeScene: playSelected missing Stream URL"
+    return
+  end if
+
+  cn = CreateObject("roSGNode", "ContentNode")
+  cn.Title = item.Title
+  cn.Url = item.Stream
+  cn.streamFormat = item.streamFormat
+  cn.live = true
+
+  print "HomeScene: PLAY "; cn.Title; " -> "; cn.Url
+
+  showPlayer()
+
+  if m.Video <> invalid then
+    m.Video.content = cn
+    m.Video.control = "play"
+  end if
+end sub
+
+
+' -------- Remote keys --------
+function onKeyEvent(key, press)
+  if press <> true then return false
+
+  ' When playing: BACK returns home
+  if m.isPlaying then
     if key = "back" then
-      m.Video.control = "stop"
-      m.Video.content = invalid
-      setIdleUI(true)
-      if m.RowList <> invalid then m.RowList.setFocus(true)
+      showHome()
       return true
     end if
-    return false
+    return true
   end if
+
+  if key = "left" then
+    m.focusIndex = 0
+    updateFocus()
+    return true
+  else if key = "right" then
+    m.focusIndex = 1
+    updateFocus()
+    return true
+  end if
+
+  if key = "OK" or key = "Select" or key = "select" then
+    playSelected()
+    return true
+  end if
+
   return false
 end function
+
+
+' -------- Video state --------
+sub onVideoStateChanged()
+  if m.Video = invalid then return
+
+  if m.Video.state = "error" then
+    print "VIDEO ERROR:"; m.Video.errorMsg
+    showHome()
+  end if
+end sub

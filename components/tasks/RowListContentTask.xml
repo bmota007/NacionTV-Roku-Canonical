@@ -6,7 +6,6 @@
 
   <script type="text/brightscript" uri="pkg:/components/Config.brs"/>
   <script type="text/brightscript"><![CDATA[
-
     Sub Init()
       m.top.functionName = "loadContent"
     End Sub
@@ -14,7 +13,6 @@
     Sub loadContent()
       array = loadConfig()
 
-      ' Build tiles in the order you want:
       intl = invalid
       hou  = invalid
 
@@ -27,15 +25,15 @@
       end for
 
       ordered = []
-      if intl <> invalid then ordered.push(intl)
-      if hou  <> invalid then ordered.push(hou)
+      if intl <> invalid then ordered.Push(intl)
+      if hou  <> invalid then ordered.Push(hou)
 
       oneRow = GetApiArray(ordered)
 
       list = [
         {
           Title: "My Channels",
-          ContentList : oneRow
+          ContentList: oneRow
         }
       ]
 
@@ -43,14 +41,14 @@
     End Sub
 
     Function ParseXMLContent(list As Object) As Object
-      RowItems = CreateObject("roSGNode","ContentNode")
+      RowItems = CreateObject("roSGNode", "ContentNode")
 
       for each rowAA in list
-        row = CreateObject("roSGNode","ContentNode")
+        row = CreateObject("roSGNode", "ContentNode")
         row.Title = rowAA.Title
 
         for each itemAA in rowAA.ContentList
-          item = CreateObject("roSGNode","ContentNode")
+          item = CreateObject("roSGNode", "ContentNode")
           item.SetFields(itemAA)
           row.AppendChild(item)
         end for
@@ -73,6 +71,5 @@
       end for
       return result
     End Function
-
   ]]></script>
 </component>

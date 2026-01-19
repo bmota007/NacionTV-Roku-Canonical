@@ -1,82 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <component name="RowListItems" extends="Group">
   <interface>
     <field id="itemContent" type="node" onChange="itemContentChanged" />
-    <field id="width" type="float" onChange="updateLayout" />
-    <field id="height" type="float" onChange="updateLayout" />
   </interface>
 
   <script type="text/brightscript"><![CDATA[
     sub init()
-      m.Poster = m.top.findNode("poster")
-      m.Label  = m.top.findNode("label")
-      m.Focus  = m.top.findNode("focusRect")
+      m.poster    = m.top.findNode("poster")
+      m.liveBadge = m.top.findNode("liveBadge")
+      m.liveLabel = m.top.findNode("liveLabel")
+      m.focusRect = m.top.findNode("focusRect")
     end sub
 
     sub itemContentChanged()
       if m.top.itemContent = invalid then return
 
-      posterUri = invalid
-      titleTxt  = invalid
-
-      ' poster
-      if m.top.itemContent.HDPosterUrl <> invalid then
-        posterUri = m.top.itemContent.HDPosterUrl
-      else if m.top.itemContent.hdposterurl <> invalid then
-        posterUri = m.top.itemContent.hdposterurl
-      else if m.top.itemContent.logo <> invalid then
-        posterUri = m.top.itemContent.logo
-      end if
-
-      ' title
-      if m.top.itemContent.Title <> invalid then
-        titleTxt = m.top.itemContent.Title
-      else if m.top.itemContent.title <> invalid then
-        titleTxt = m.top.itemContent.title
-      end if
-
-      if m.Poster <> invalid and posterUri <> invalid then m.Poster.uri = posterUri
-      if m.Label <> invalid then
-        if titleTxt <> invalid then
-          m.Label.text = titleTxt
-        else
-          m.Label.text = ""
+      ' Poster image
+      if m.poster <> invalid then
+        if m.top.itemContent.HDPosterUrl <> invalid then
+          m.poster.uri = m.top.itemContent.HDPosterUrl
+        else if m.top.itemContent.hdposterurl <> invalid then
+          m.poster.uri = m.top.itemContent.hdposterurl
+        else if m.top.itemContent.Logo <> invalid then
+          m.poster.uri = m.top.itemContent.Logo
+        else if m.top.itemContent.logo <> invalid then
+          m.poster.uri = m.top.itemContent.logo
         end if
       end if
-    end sub
 
-    sub updateLayout()
-      w = m.top.width
-      h = m.top.height
-
-      if m.Focus <> invalid then
-        m.Focus.width = w
-        m.Focus.height = h
-      end if
-
-      if m.Poster <> invalid then
-        m.Poster.width = w
-        m.Poster.height = h - 60
-      end if
-
-      if m.Label <> invalid then
-        m.Label.width = w
-        m.Label.height = 60
-        m.Label.translation = [0, h - 60]
-      end if
+      ' Always show EN VIVO pill for now (both streams are live)
+      if m.liveBadge <> invalid then m.liveBadge.visible = true
+      if m.liveLabel <> invalid then m.liveLabel.visible = true
     end sub
   ]]></script>
 
   <children>
-    <!-- Focus outline (RowList will toggle opacity automatically using focus/defocus states) -->
+    <!-- Focus outline (transparent by default; focus handled by RowList focus style) -->
     <Rectangle id="focusRect"
-               width="500" height="320"
-               color="0xFFFFFFFF"
+               width="500" height="240"
+               color="0x000000FF"
                opacity="0.0" />
 
-    <!-- Poster -->
+    <!-- Poster (shorter tile like Samsung style) -->
     <Poster id="poster"
-            width="500" height="260"
+            width="500" height="240"
             loadDisplayMode="scaleToFill" />
 
     <!-- EN VIVO pill -->
@@ -84,27 +52,14 @@
                width="120" height="32"
                translation="[14,14]"
                color="0xD32F2FFF"
-               opacity="1.0" />
+               opacity="1.0"
+               visible="true" />
+
     <Label id="liveLabel"
            text="EN VIVO"
            translation="[30,19]"
            font="font:SmallBoldSystemFont"
-           color="0xFFFFFFFF" />
-
-    <!-- Bottom title bar -->
-    <Rectangle id="titleBar"
-               width="500" height="60"
-               translation="[0,260]"
-               color="0x000000"
-               opacity="0.55" />
-
-    <Label id="label"
-           width="500" height="60"
-           translation="[0,260]"
-           horizAlign="center"
-           vertAlign="center"
            color="0xFFFFFFFF"
-           font="font:MediumBoldSystemFont"
-           text="" />
+           visible="true" />
   </children>
 </component>
