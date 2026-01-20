@@ -1,4 +1,5 @@
-Function loadConfig()
+' config.brs
+Function loadConfig() as Object
     return [
         {
             Title: "HOUSTON",

@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <component name="HomeScene" extends="Scene">
   <script type="text/brightscript" uri="pkg:/components/HomeScene.brs" />
-  <script type="text/brightscript" uri="pkg:/components/Config.brs" />
+  <script type="text/brightscript" uri="pkg:/components/tasks/config.brs" />
 
   <interface>
     <function name="requestDeepLink" />
@@ -11,77 +10,30 @@
   </interface>
 
   <children>
-    <Poster
-      id="Bg"
-      width="1280" height="720"
-      translation="[0,0]"
-      uri="pkg:/images/bg_idle.jpg"
-      loadDisplayMode="scaleToFill"
-      visible="true" />
+    <Poster id="Bg" width="1280" height="720" uri="pkg:/images/bg_idle.jpg" loadDisplayMode="scaleToFill" />
+    <Rectangle id="BgDim" width="1280" height="720" color="0x000000" opacity="0.25" />
+    <Video id="Video" width="1280" height="720" visible="false" />
 
-    <Rectangle
-      id="BgDim"
-      width="1280" height="720"
-      translation="[0,0]"
-      color="0x000000"
-      opacity="0.25"
-      visible="true" />
-
-    <Video
-      id="Video"
-      width="1280" height="720"
-      translation="[0,0]"
-      visible="false" />
-
-    <!-- TWO TILES (shorter like Samsung) -->
-    <Group id="Menu" translation="[140,400]" visible="true">
-
-      <!-- TILE: INTERNACIONAL -->
-      <Group id="IntlTile" translation="[0,0]" scale="[1.0,1.0]">
-
-        <!-- charcoal focus behind tile -->
-        <Rectangle id="IntlFocus"
-          width="480" height="260"
-          translation="[-10,-10]"
-          color="0x000000FF"
-          opacity="0.0" />
-
-        <Poster id="IntlPoster"
-          width="460" height="220"
-          uri="pkg:/images/internacional_poster.png"
-          loadDisplayMode="scaleToFill" />
-
-        <!-- EN VIVO badge -->
-        <Group id="IntlBadge" translation="[16,14]" visible="true">
-          <Rectangle width="126" height="34" color="0xD32F2FFF" opacity="1.0" />
-          <Label id="IntlLiveDot" text="●" translation="[10,4]" color="0xFFFFFFFF" font="font:MediumBoldSystemFont" />
-          <Label text="EN VIVO" translation="[32,6]" color="0xFFFFFFFF" font="font:SmallBoldSystemFont" />
+    <Group id="Menu" translation="[140,400]">
+      <Group id="IntlTile" scale="[1.0,1.0]">
+        <Rectangle id="IntlFocus" width="480" height="260" translation="[-10,-10]" color="0x000000FF" opacity="0.0" />
+        <Poster id="IntlPoster" width="460" height="220" uri="pkg:/images/internacional_poster.png" />
+        <Group id="IntlBadge" translation="[16,14]">
+          <Rectangle width="126" height="34" color="0xD32F2FFF" />
+          <Label id="IntlLiveDot" text="●" translation="[10,4]" color="0xFFFFFFFF" />
+          <Label text="EN VIVO" translation="[32,6]" color="0xFFFFFFFF" />
         </Group>
       </Group>
 
-      <!-- TILE: HOUSTON -->
       <Group id="HouTile" translation="[510,0]" scale="[1.0,1.0]">
-
-        <!-- charcoal focus behind tile -->
-        <Rectangle id="HouFocus"
-          width="480" height="260"
-          translation="[-10,-10]"
-          color="0x000000FF"
-          opacity="0.0" />
-
-        <Poster id="HouPoster"
-          width="460" height="220"
-          uri="pkg:/images/houston_poster.png"
-          loadDisplayMode="scaleToFill" />
-
-        <!-- EN VIVO badge -->
-        <Group id="HouBadge" translation="[16,14]" visible="true">
-          <Rectangle width="126" height="34" color="0xD32F2FFF" opacity="1.0" />
-          <Label id="HouLiveDot" text="●" translation="[10,4]" color="0xFFFFFFFF" font="font:MediumBoldSystemFont" />
-          <Label text="EN VIVO" translation="[32,6]" color="0xFFFFFFFF" font="font:SmallBoldSystemFont" />
+        <Rectangle id="HouFocus" width="480" height="260" translation="[-10,-10]" color="0x000000FF" opacity="0.0" />
+        <Poster id="HouPoster" width="460" height="220" uri="pkg:/images/houston_poster.png" />
+        <Group id="HouBadge" translation="[16,14]">
+          <Rectangle width="126" height="34" color="0xD32F2FFF" />
+          <Label id="HouLiveDot" text="●" translation="[10,4]" color="0xFFFFFFFF" />
+          <Label text="EN VIVO" translation="[32,6]" color="0xFFFFFFFF" />
         </Group>
       </Group>
-
     </Group>
   </children>
 </component>

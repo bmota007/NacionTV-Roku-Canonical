@@ -4,7 +4,7 @@
     <field id="content" type="node" />
   </interface>
 
-  <script type="text/brightscript" uri="pkg:/components/Config.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/tasks/config.brs"/>
   <script type="text/brightscript"><![CDATA[
     Sub Init()
       m.top.functionName = "loadContent"
@@ -12,7 +12,6 @@
 
     Sub loadContent()
       array = loadConfig()
-
       intl = invalid
       hou  = invalid
 
@@ -29,33 +28,25 @@
       if hou  <> invalid then ordered.Push(hou)
 
       oneRow = GetApiArray(ordered)
-
-      list = [
-        {
-          Title: "My Channels",
-          ContentList: oneRow
-        }
-      ]
-
+      list = [{ Title: "My Channels", ContentList: oneRow }]
       m.top.content = ParseXMLContent(list)
     End Sub
 
     Function ParseXMLContent(list As Object) As Object
       RowItems = CreateObject("roSGNode", "ContentNode")
-
       for each rowAA in list
         row = CreateObject("roSGNode", "ContentNode")
         row.Title = rowAA.Title
-
         for each itemAA in rowAA.ContentList
           item = CreateObject("roSGNode", "ContentNode")
-          item.SetFields(itemAA)
+          item.Title = itemAA.Title
+          item.Url = itemAA.Url
+          item.streamFormat = itemAA.streamFormat
+          item.HDPosterUrl = itemAA.HDPosterUrl
           row.AppendChild(item)
         end for
-
         RowItems.AppendChild(row)
       end for
-
       return RowItems
     End Function
 
@@ -65,8 +56,8 @@
         item = {}
         item.Title = element.Title
         item.streamFormat = element.streamFormat
-        item.HDPosterUrl = element.Logo
-        item.Url = element.Stream
+        item.HDPosterUrl = element.Logo 
+        item.Url = element.Stream       
         result.Push(item)
       end for
       return result

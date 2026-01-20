@@ -1,65 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <component name="RowListItems" extends="Group">
   <interface>
-    <field id="itemContent" type="node" onChange="itemContentChanged" />
+    <field id="itemContent" type="node" />
   </interface>
 
   <script type="text/brightscript"><![CDATA[
     sub init()
-      m.poster    = m.top.findNode("poster")
-      m.liveBadge = m.top.findNode("liveBadge")
-      m.liveLabel = m.top.findNode("liveLabel")
-      m.focusRect = m.top.findNode("focusRect")
+      m.poster = m.top.findNode("poster")
+      m.label  = m.top.findNode("label")
+      
+      ' FIX: Manually set up the observer for the itemContent field
+      m.top.observeField("itemContent", "itemContentChanged")
     end sub
 
     sub itemContentChanged()
       if m.top.itemContent = invalid then return
 
-      ' Poster image
-      if m.poster <> invalid then
-        if m.top.itemContent.HDPosterUrl <> invalid then
-          m.poster.uri = m.top.itemContent.HDPosterUrl
-        else if m.top.itemContent.hdposterurl <> invalid then
-          m.poster.uri = m.top.itemContent.hdposterurl
-        else if m.top.itemContent.Logo <> invalid then
-          m.poster.uri = m.top.itemContent.Logo
-        else if m.top.itemContent.logo <> invalid then
-          m.poster.uri = m.top.itemContent.logo
-        end if
+      if m.poster <> invalid and m.top.itemContent.HDPosterUrl <> invalid then
+        m.poster.uri = m.top.itemContent.HDPosterUrl
       end if
 
-      ' Always show EN VIVO pill for now (both streams are live)
-      if m.liveBadge <> invalid then m.liveBadge.visible = true
-      if m.liveLabel <> invalid then m.liveLabel.visible = true
+      ' We will NOT show big names on tiles (images already have text)
+      if m.label <> invalid then
+        m.label.text = ""
+      end if
     end sub
   ]]></script>
 
   <children>
-    <!-- Focus outline (transparent by default; focus handled by RowList focus style) -->
-    <Rectangle id="focusRect"
-               width="500" height="240"
-               color="0x000000FF"
-               opacity="0.0" />
+    <Poster
+      id="poster"
+      width="460" height="240"
+      loadDisplayMode="scaleToFill" />
 
-    <!-- Poster (shorter tile like Samsung style) -->
-    <Poster id="poster"
-            width="500" height="240"
-            loadDisplayMode="scaleToFill" />
+    <Rectangle
+      width="460" height="44"
+      translation="[0,196]"
+      color="0x000000FF"
+      opacity="0.20" />
 
-    <!-- EN VIVO pill -->
-    <Rectangle id="liveBadge"
-               width="120" height="32"
-               translation="[14,14]"
-               color="0xD32F2FFF"
-               opacity="1.0"
-               visible="true" />
-
-    <Label id="liveLabel"
-           text="EN VIVO"
-           translation="[30,19]"
-           font="font:SmallBoldSystemFont"
-           color="0xFFFFFFFF"
-           visible="true" />
+    <Label
+      id="label"
+      width="460" height="44"
+      translation="[0,196]"
+      horizAlign="center"
+      vertAlign="center"
+      color="0xFFFFFFFF"
+      font="font:SmallBoldSystemFont"
+      text="" />
   </children>
 </component>
