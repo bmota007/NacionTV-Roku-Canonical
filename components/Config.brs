@@ -1,7 +1,3 @@
-'===========================================================
-' Config.brs - NacionTV streams
-'===========================================================
-
 Function loadConfig() as Object
   arr = []
 
@@ -21,3 +17,4 @@ Function loadConfig() as Object
 
   return arr
 End Function
+
