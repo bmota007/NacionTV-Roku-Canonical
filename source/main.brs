@@ -1,138 +1,120 @@
-sub Main(args as Dynamic)
-    print "========================================"
-    print "MAIN: Channel starting"
-    print "========================================"
-    
-    ' ==================== DUAL MEMORY MONITORING ====================
-    ' Approach 1: roDeviceInfo (for compatibility)
-    deviceInfo = CreateObject("roDeviceInfo")
-    if deviceInfo <> invalid
-        print "MAIN: roDeviceInfo created"
-        
-        ' Call ALL memory functions from roDeviceInfo
-        availableMem1 = deviceInfo.GetChannelAvailableMemory()
-        memoryLimit1 = deviceInfo.GetChannelMemoryLimit()
-        memoryPercent1 = deviceInfo.GetMemoryLimitPercent()
-        
-        print "MAIN: roDeviceInfo Memory - Available: "; availableMem1; ", Limit: "; memoryLimit1; ", Percent: "; memoryPercent1
-        
-        ' Enable memory warning if available
-        if deviceInfo.EnableLowMemoryWarning <> invalid
-            deviceInfo.EnableLowMemoryWarning(true)
-        end if
-    end if
-    
-    ' Approach 2: TRY roMemoryStatus (for certification scanner)
-    ' The scanner specifically looks for these function names
-    try
-        memoryStatus = CreateObject("roMemoryStatus")
-        if memoryStatus <> invalid
-            print "MAIN: roMemoryStatus created"
-            
-            ' CRITICAL: These exact function names are what the scanner looks for
-            memoryStatus.EnableLowGeneralMemoryEvent(true)
-            memoryStatus.EnableMemoryWarningEvent(true)
-            
-            ' Also call the Get functions
-            availableMem2 = memoryStatus.GetChannelAvailableMemory()
-            memoryLimit2 = memoryStatus.GetChannelMemoryLimit()
-            memoryPercent2 = memoryStatus.GetMemoryLimitPercent()
-            
-            print "MAIN: roMemoryStatus Memory - Available: "; availableMem2; ", Limit: "; memoryLimit2; ", Percent: "; memoryPercent2
-        else
-            print "MAIN: roMemoryStatus not available on this device"
-        end if
-    catch e
-        print "MAIN: roMemoryStatus not supported: "; e.message
-        ' Create a dummy roInput event handler to satisfy deep linking check
-        setupDummyInputHandler()
-    end try
-    
-    ' ==================== SCREEN SETUP ====================
-    screen = CreateObject("roSGScreen")
-    port = CreateObject("roMessagePort")
-    screen.SetMessagePort(port)
-    
-    scene = screen.CreateScene("HomeScene")
-    screen.Show()
-    
-    ' ==================== CRITICAL: roINPUT SETUP ====================
-    ' This MUST exist for deep linking support
-    input = CreateObject("roInput")
-    if input <> invalid
-        input.SetMessagePort(port)
-        print "MAIN: roInput created successfully"
-        
-        ' Also set up an event handler specifically for certification
-        input.EnableEventTypes({
-            input: ["*"]  # Listen to ALL input events
-        })
-    else
-        print "MAIN: WARNING - roInput creation failed"
-    end if
-    
-    ' ==================== COMPLETE DEEP LINK HANDLING ====================
-    print "MAIN: Launch args: "; args
-    
-    ' Check for ALL types of deep linking
-    if args <> invalid
-        ' Store args for later use
-        m.args = args
-        
-        ' Log ALL argument details
-        for each key in args
-            print "MAIN: Arg["; key; "] = "; args[key]
-        end for
-        
-        ' Handle input deep linking (roInput events)
-        if args.reason = "input" or args.mediaType = "input" or args.contentId <> invalid
-            print "MAIN: Processing deep link input"
-            if scene <> invalid
-                ' Pass complete args to scene
-                scene.callFunc("OnInputAssoc", args)
-            end if
-        end if
-    end if
-    
-    ' ==================== MAIN EVENT LOOP ====================
-    while true
-        msg = wait(0, port)
-        
-        if msg <> invalid
-            msgType = type(msg)
-            print "MAIN: Event type: "; msgType
-            
-            if msgType = "roSGScreenEvent"
-                if msg.IsScreenClosed() then exit while
-                
-            else if msgType = "roInputEvent"
-                ' CRITICAL: Handle ALL roInput events
-                info = msg.GetInfo()
-                print "MAIN: roInputEvent DETAILS:"
-                for each key in info
-                    print "  Input["; key; "] = "; info[key]
-                end for
-                
-                ' Forward to scene for processing
-                if scene <> invalid
-                    scene.callFunc("OnInputAssoc", info)
-                end if
-                
-            else if msgType = "roLowGeneralMemoryEvent" or msgType = "roMemoryWarningEvent"
-                ' Handle memory events
-                print "MAIN: Memory event: "; msgType
-                if scene <> invalid
-                    scene.callFunc("onLowMemory", {})
-                end if
-            end if
-        end if
-    end while
-    
-    print "MAIN: Channel exiting"
-end sub
+'===========================================================
+' main.brs - Roku Deep Linking 5.1/5.2 + Behavior Harness safe
+' - supports_input_launch=1 in manifest
+' - Handles cold-launch deep links (launch/dev?contentId=...&mediaType=...)
+' - Handles in-app deep links (roInputEvent)
+' - ALWAYS forwards deep link AA to HomeScene.OnInputAssoc()
+'===========================================================
 
-' Helper function for devices without roMemoryStatus
-sub setupDummyInputHandler()
-    print "MAIN: Setting up dummy input handler for certification"
-    ' This ensures deep linking is at least attempted
+sub Main(args as Dynamic)
+  print "MAIN: start"
+
+  port = CreateObject("roMessagePort")
+
+  ' roInput (required for 5.2 while running)
+  input = CreateObject("roInput")
+  if input <> invalid then
+    input.SetMessagePort(port)
+    print "MAIN: roInput created"
+  else
+    print "MAIN: roInput FAILED"
+  end if
+
+  screen = CreateObject("roSGScreen")
+  screen.SetMessagePort(port)
+
+  scene = screen.CreateScene("HomeScene")
+  screen.Show()
+
+  ' ------------------------------------------------------------
+  ' COLD LAUNCH deep link handling (ECP launch/dev?contentId=... )
+  ' Roku often sends keys as: contentid + mediatype (lowercase)
+  ' ------------------------------------------------------------
+  if args <> invalid then
+    print "MAIN: launch args = "; FormatJson(args)
+
+    cid = ""
+    mt  = ""
+
+    ' Accept ALL casing variants
+    if args.DoesExist("contentid") and args.contentid <> invalid then cid = "" + args.contentid
+    if args.DoesExist("contentId") and args.contentId <> invalid then cid = "" + args.contentId
+    if args.DoesExist("contentID") and args.contentID <> invalid then cid = "" + args.contentID
+
+    if args.DoesExist("mediatype") and args.mediatype <> invalid then mt = "" + args.mediatype
+    if args.DoesExist("mediaType") and args.mediaType <> invalid then mt = "" + args.mediaType
+    if args.DoesExist("MediaType") and args.MediaType <> invalid then mt = "" + args.MediaType
+
+    ' If we got a contentId, force a normalized AA and forward to scene
+    if cid <> "" then
+      dl = {
+        contentid: cid
+        contentId: cid
+        mediatype: mt
+        mediaType: mt
+        reason: "input"
+      }
+
+      print "MAIN: forwarding cold deep link -> "; FormatJson(dl)
+
+      if scene <> invalid then
+        scene.callFunc("OnInputAssoc", dl)
+      end if
+    else
+      print "MAIN: no contentId in launch args (normal launch)"
+    end if
+  end if
+
+  ' ------------------------------------------------------------
+  ' MAIN LOOP: roInputEvent deep links while app is running
+  ' ------------------------------------------------------------
+  while true
+    msg = wait(0, port)
+
+    if msg <> invalid then
+      t = type(msg)
+
+      if t = "roSGScreenEvent" then
+        if msg.IsScreenClosed() then
+          print "MAIN: screen closed"
+          return
+        end if
+
+      else if t = "roInputEvent" then
+        if msg.IsInput() then
+          info = msg.GetInfo()
+          print "MAIN: roInputEvent GetInfo = "; FormatJson(info)
+
+          cid2 = ""
+          mt2  = ""
+
+          if info.DoesExist("contentid") then cid2 = "" + info.contentid
+          if info.DoesExist("contentId") then cid2 = "" + info.contentId
+          if info.DoesExist("contentID") then cid2 = "" + info.contentID
+
+          if info.DoesExist("mediatype") then mt2 = "" + info.mediatype
+          if info.DoesExist("mediaType") then mt2 = "" + info.mediaType
+          if info.DoesExist("MediaType") then mt2 = "" + info.MediaType
+
+          if cid2 <> "" then
+            dl2 = {
+              contentid: cid2
+              contentId: cid2
+              mediatype: mt2
+              mediaType: mt2
+              reason: "input"
+            }
+
+            print "MAIN: forwarding roInput deep link -> "; FormatJson(dl2)
+
+            if scene <> invalid then
+              scene.callFunc("OnInputAssoc", dl2)
+            end if
+          else
+            print "MAIN: roInputEvent had no contentId"
+          end if
+        end if
+      end if
+    end if
+  end while
 end sub
